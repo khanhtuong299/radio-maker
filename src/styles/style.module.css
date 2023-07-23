@@ -1,0 +1,82 @@
+.playmusic {
+  display: flex;
+}
+
+.musicanimation {
+  display: flex;
+  margin-right: 10px;
+  align-items: flex-end;
+  position: relative;
+  top: -5px;
+}
+.musicanimation.on .bar {
+  -webkit-animation: bar 1.2s infinite;
+          animation: bar 1.2s infinite;
+}
+.musicanimation.on .bar2 {
+  -webkit-animation-delay: 0.1s;
+          animation-delay: 0.1s;
+}
+.musicanimation.on .bar3 {
+  -webkit-animation-delay: 0.2s;
+          animation-delay: 0.2s;
+}
+.musicanimation.on .bar4 {
+  -webkit-animation-delay: 0.3s;
+          animation-delay: 0.3s;
+}
+.musicanimation.on .bar5 {
+  -webkit-animation-delay: 0.4s;
+          animation-delay: 0.4s;
+}
+
+.musictoggle {
+  cursor: pointer;
+  font-size: 20px;
+  position: flex;
+  text-align: center;
+}
+.musictoggle:after {
+  content: "";
+  display: block;
+  height: 1px;
+  width: 0;
+  background-color: #000;
+  position: absolute;
+  transition: 0.5s;
+}
+.musictoggle:hover:after {
+  width: 50%;
+}
+
+.bar {
+  width: 1px;
+  background-color: #000;
+  height: 2px;
+  display: block;
+  margin: 0 1px;
+}
+
+@-webkit-keyframes bar {
+  0% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+  100% {
+    height: 4px;
+  }
+}
+
+@keyframes bar {
+  0% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+  100% {
+    height: 4px;
+  }
+}
