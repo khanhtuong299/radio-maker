@@ -40,28 +40,26 @@ pub fn init_processing(){
 
 pub fn on_input(path: &str) -> &str {
     
-    //check file exist and read
     let file_path: &Path = Path::new(path);
-    let data = match fs::read(file_path) {
+    let file: BufReader<File> = BufReader::new(
+        match File::open(file_path) {
+            Ok(v) => v,
+            Err(_) => {
+                println!("File is corrupted!");
+                return "File is corrupted!"
+            }
+        }
+    );
+
+    match Decoder::new(file) {
         Ok(v) => v,
         Err(_) => {
-            println!("File does not exist!");
-            return "File does not exist!"
-        } ,
-    };
-    //load file
-    let (header, _) =  match puremp3::read_mp3(&data[..]) {
-        Ok(v) => v,
-        Err(_) => {
-            println!("Invalid MP3");
-            return "Invalid MP3"
-        },
+            println!("Invalid music file");
+            return "Invalid music file"
+        }
     };
     
-    println!("Frameheader {:?}", header);
     let file_name = file_path.file_name().unwrap().to_str().unwrap();
-    
-    
     let mut cur_state = GLOBAL_STATE.lock().unwrap();
     cur_state.song_name = String::from(file_name);
     cur_state.path = String::from(path);
