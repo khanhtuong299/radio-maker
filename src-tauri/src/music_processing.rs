@@ -167,5 +167,4 @@ fn play_music(){
     };
     
     audio_player.sink.append(source);
-    audio_player.sink.sleep_until_end();
 }
