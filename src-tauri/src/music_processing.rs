@@ -1,10 +1,11 @@
 
 use std::{fs, path::Path, fs::File};
-use std::sync::Mutex;
 use lazy_static::lazy_static;
 use std::io::BufReader;
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream, Sink, OutputStreamHandle, Source};
 use std::thread;
+use std::mem::MaybeUninit;
+use std::sync::{Mutex, Once};
 
 struct GlobalState {
     song_name: String,
@@ -16,6 +17,12 @@ struct GlobalState {
     // sink: Sink
 }
 
+struct AudioPlayer {
+    stream: OutputStream,
+    stream_handle: OutputStreamHandle,
+    sink: Sink,
+}
+
 lazy_static!{
     static ref GLOBAL_STATE: Mutex<GlobalState> = Mutex::new(GlobalState{
         song_name: String::from("tmp"),
@@ -24,28 +31,11 @@ lazy_static!{
         is_playable:false,
         is_coverted:false,
         covert_name:String::from("tmp_converted"),
-        // sink: Sink::try_new(&(OutputStream::try_default().unwrap().1)).unwrap()
     });
 }
 
-// const _STREAM: OnceLock<OutputStream> = OnceLock::new();
-// const STREAM_HANDLE: OnceLock<OutputStreamHandle> = OnceLock::new();
-// const SINK: OnceLock<Sink> = OnceLock::new();
 pub fn init_processing(){
 
-    // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
-    
-    // _STREAM.get_or_init(|| {
-    //         _stream
-    // });
-
-    // STREAM_HANDLE.get_or_init(|| {
-    //     stream_handle
-    // });
-
-    // SINK.get_or_init(||{
-    //     Sink::try_new(&stream_handle).unwrap()
-    // });
 }
 
 pub fn on_input(path: &str) -> &str {
@@ -90,13 +80,14 @@ pub fn toggle_play_music() -> String {
         true => match  cur_state.is_playing {
             true => {
                 cur_state.is_playing = false;
+                let audio_player = init_audio_player().lock().unwrap();
+                audio_player.sink.pause();
                 "Stop".to_string()
             },
             false => {
                 cur_state.is_playing = true;
                 thread::spawn(||{
                     play_music();
-                    // std::thread::sleep(std::time::Duration::from_secs(10));
                 });
                 
                 "Playing".to_string()
@@ -120,20 +111,44 @@ fn get_file_path() -> String {
     Path::new(&(cur_state.path)).to_str().unwrap().to_string()
 }
 
+fn init_audio_player() -> &'static Mutex<AudioPlayer> {
+    static mut CONF: MaybeUninit<Mutex<AudioPlayer>> = MaybeUninit::uninit();
+    static ONCE: Once = Once::new();
+
+    let (_stream, _stream_handle) = OutputStream::try_default().unwrap();
+
+    ONCE.call_once(|| unsafe {
+        CONF.as_mut_ptr().write(Mutex::new(
+            AudioPlayer {
+                stream:_stream,
+                stream_handle:_stream_handle.clone(),
+                sink:Sink::try_new(&_stream_handle).unwrap()
+            }
+        ));
+    });
+    unsafe { &*CONF.as_ptr() }
+}
+
+fn get_sink()-> Sink {
+    let audio_player = init_audio_player().lock().unwrap();
+    let sink = Sink::try_new(&audio_player.stream_handle).unwrap();
+    sink
+}
+
 
 fn play_music(){
-    
-    let (_stream, stream_handle) = match OutputStream::try_default() {
-      Ok((v,t)) => (v,t),  
-      Err(_) => {
-        println!("can not access speaker");
+
+    let audio_player = init_audio_player().lock().unwrap();
+    // let sink: Sink = get_sink();
+
+    if audio_player.sink.is_paused() {
+        audio_player.sink.play();
         return
-      }
-    };
+    }
+
     let path = get_file_path();
     let file_path: &Path = Path::new(path.as_str());
 
-    
     let file: BufReader<File> = BufReader::new(
         match File::open(file_path) {
             Ok(v) => v,
@@ -150,16 +165,7 @@ fn play_music(){
             return
         }
     };
-
-    let sink = match Sink::try_new(&stream_handle) {
-        Ok(v) => v,
-        Err(_) => {
-            println!("can not create Sink");
-            return
-        }
-    };
-    sink.append(source);
-    // cur_state.sink.append(source);
-    std::thread::sleep(std::time::Duration::from_secs(50));
-
+    
+    audio_player.sink.append(source);
+    audio_player.sink.sleep_until_end();
 }
