@@ -3,6 +3,7 @@
 mod api;
 
 fn main() {
+  // api::init_processing();
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
       api::greet
