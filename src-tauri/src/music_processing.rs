@@ -8,6 +8,7 @@ use std::sync::{Mutex, Once};
 
 struct GlobalState {
     song_name: String,
+    playing_name: String,
     path: String,
     is_playable:bool,
     is_coverted:bool,
@@ -30,7 +31,7 @@ struct AudioPlayer {
 
 impl GlobalState {
     fn set_state(&mut self, state:PlayerState) {
-        println!("tuong current state {:?}", state);
+        // println!("tuong current state {:?}", state);
         self.state = state
     }
     fn get_state(&self)->PlayerState {
@@ -45,6 +46,7 @@ impl GlobalState {
 lazy_static!{
     static ref GLOBAL_STATE: Mutex<GlobalState> = Mutex::new(GlobalState{
         song_name: String::from("tmp"),
+        playing_name: String::from("tmp"),
         path: String::from("./"),
         is_playable:false,
         is_coverted:false,
@@ -60,11 +62,10 @@ pub fn init_processing(){
     cur_state.is_coverted = false;
     cur_state.covert_name = "".to_string();
     cur_state.path = String::from("./");
-    let curstate = PlayerState::Init;
-    cur_state.state = curstate;
+    cur_state.set_state(PlayerState::Init);
 }
 
-pub fn on_input(path: &str) -> &str {
+pub fn on_input(path: &str) -> String {
     
     let file_path: &Path = Path::new(path);
     let file: BufReader<File> = BufReader::new(
@@ -72,7 +73,7 @@ pub fn on_input(path: &str) -> &str {
             Ok(v) => v,
             Err(_) => {
                 println!("File is corrupted!");
-                return "File is corrupted!"
+                return "File is corrupted!".to_string()
             }
         }
     );
@@ -81,34 +82,47 @@ pub fn on_input(path: &str) -> &str {
         Ok(v) => v,
         Err(_) => {
             println!("Invalid music file");
-            return "Invalid music file"
+            return "Invalid music file".to_string()
         }
     };
     
     let file_name = file_path.file_name().unwrap().to_str().unwrap();
     let mut cur_state = GLOBAL_STATE.lock().unwrap();
+
+    if *path == cur_state.get_file_path() {
+        let audio_player = init_audio_player().lock().unwrap();
+
+        if audio_player.sink.is_paused() {
+            cur_state.set_state(PlayerState::Pause);
+        } else {
+            cur_state.set_state(PlayerState::Play);
+        }
+
+        return String::from(file_name);
+    } 
+    
     cur_state.song_name = String::from(file_name);
     cur_state.path = String::from(path);
     cur_state.is_playable = true;
     cur_state.is_coverted = false;
+
+    String::from(file_name)
+
+    // if cur_state.playing_name == "tmp".to_string() {
+    //     return String::from(file_name);
+    // }
+
+    // format!("Pending: {}\nPlaying: {}", String::from(file_name), cur_state.playing_name)
     
-    file_name
+    
 } 
 
 pub fn reset_state(){
     let mut cur_state = GLOBAL_STATE.lock().unwrap();
-    cur_state.song_name = "".to_string();
-    cur_state.is_playable = false;
-    cur_state.is_coverted = false;
-    cur_state.covert_name = "".to_string();
-    cur_state.path = String::from("./");
 
     match cur_state.get_state() {
         PlayerState::Init => (),
-        _ => {
-            let curstate = PlayerState::Reset;
-            cur_state.set_state(curstate);
-        }
+        _ => cur_state.set_state(PlayerState::Reset),
     }
 }
 
@@ -145,8 +159,7 @@ pub fn on_play() -> bool{
 
     if let PlayerState::Pause = cur_state.get_state() {
         audio_player.sink.play();
-        let curstate = PlayerState::Play;
-        cur_state.set_state(curstate);
+        cur_state.set_state(PlayerState::Play);
         return true;
     }
 
@@ -176,12 +189,13 @@ pub fn on_play() -> bool{
         }
         audio_player.sink.stop();
     }
-
-    audio_player.sink.append(source);
-
     
-    let curstate = PlayerState::Play;
-    cur_state.set_state(curstate);
+    audio_player.sink.append(source);
+    
+    let file_name = file_path.file_name().unwrap().to_str().unwrap();
+
+    cur_state.playing_name = String::from(file_name);
+    cur_state.set_state(PlayerState::Play);
     true
 }
 
@@ -197,8 +211,7 @@ pub fn on_pause() -> bool{
         },
         PlayerState::Play => {
             audio_player.sink.pause();
-            let curstate = PlayerState::Pause;
-            cur_state.set_state(curstate);
+            cur_state.set_state(PlayerState::Pause);
         },
         _ => {}
     }
@@ -208,8 +221,11 @@ pub fn on_pause() -> bool{
 pub fn on_stop() -> bool {
     let audio_player = init_audio_player().lock().unwrap();
     let mut cur_state = GLOBAL_STATE.lock().unwrap();
+    if let PlayerState::Pause = cur_state.get_state() {
+        audio_player.sink.play();
+        audio_player.sink.stop();
+    }
     audio_player.sink.stop();
-    let curstate = PlayerState::Stop;
-    cur_state.set_state(curstate);
+    cur_state.set_state(PlayerState::Stop);
     true
 }

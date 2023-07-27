@@ -16,7 +16,7 @@ pub fn greet(name: &str) -> String {
 #[tauri::command]
 pub fn on_drop(path: &str) -> String {
   music_processing::reset_state();
-  music_processing::on_input(path).to_string()
+  music_processing::on_input(path)
 }
 
 #[tauri::command]
