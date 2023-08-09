@@ -211,13 +211,11 @@ fn on_play_iml(radio:bool) -> bool{
         _ => {}
     }
 
-    let path: String;
-
-    if radio {
-        path = cur_state.radio_path.clone();
+    let path: String = if radio {
+        cur_state.radio_path.clone()
     } else {
-        path = cur_state.get_file_path();
-    }
+        cur_state.get_file_path()
+    };
     
     let file_path: &Path = Path::new(path.as_str());
 
@@ -295,7 +293,6 @@ pub fn on_stop() -> bool {
 }
 
 pub fn convert_2_radio(){
-
     let mut cur_state = GLOBAL_STATE.lock().unwrap();
     let song_name = cur_state.get_song_name();
     let file_path = cur_state.get_file_path();
