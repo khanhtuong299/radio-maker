@@ -12,6 +12,7 @@ enum LogLevel {
 
 enum MusicState {
   play,
+  playradio,
   pause,
   stop,
 }
@@ -27,24 +28,36 @@ listen('tauri://file-drop', event => {
       button!.innerHTML = "&#9835&#160" + response + "&#160&#9835";
       let controlbar = document.getElementById("control");
       controlbar!.style.display = "initial";
+      let convertBtn = document.getElementById("convert2Radio");
+      convertBtn!.style.display = "initial";
+      let playConvertBtn = document.getElementById("playRadioBtn");
+      playConvertBtn!.style.display = "none";
     })
 })
 
 function ChangeControl() {
   if (CurrentState == MusicState.play) {
-    document.getElementById("playBtn")!.innerHTML = " &#9834 Play";
+    document.getElementById("playBtn")!.innerHTML = "&#9834 Play";
     document.getElementById("pauseBtn")!.innerHTML = "Pause";
     document.getElementById("stopBtn")!.innerHTML = "Stop";
+    document.getElementById("playRadioBtn")!.innerHTML = "Play Radio";
     document.getElementById("musicanimation")!.classList.add('on');
   } else if (CurrentState == MusicState.pause) {
     document.getElementById("playBtn")!.innerHTML = "Play";
-    document.getElementById("pauseBtn")!.innerHTML = " &#9834 Pause";
+    document.getElementById("pauseBtn")!.innerHTML = "&#9834 Pause";
     document.getElementById("stopBtn")!.innerHTML = "Stop";
+    document.getElementById("playRadioBtn")!.innerHTML = "Play Radio";
     document.getElementById("musicanimation")!.classList.remove('on')
-  } else {
+  } else if (CurrentState == MusicState.stop) {
     document.getElementById("playBtn")!.innerHTML = "Play";
     document.getElementById("pauseBtn")!.innerHTML = "Pause";
-    document.getElementById("stopBtn")!.innerHTML = " &#9834 Stop";
+    document.getElementById("stopBtn")!.innerHTML = "&#9834 Stop";
+    document.getElementById("playRadioBtn")!.innerHTML = "Play Radio";
+  } else if (CurrentState == MusicState.playradio) {
+    document.getElementById("playBtn")!.innerHTML = "Play";
+    document.getElementById("pauseBtn")!.innerHTML = "Pause";
+    document.getElementById("stopBtn")!.innerHTML = "Stop";
+    document.getElementById("playRadioBtn")!.innerHTML = "&#9834 Play Radio";
   }
 }
 
@@ -99,6 +112,33 @@ const onToggle = () => {
   }
 }
 
+const onPlayRadio = () => {
+
+  invoke<boolean>('on_radio')
+    .then((response) => {
+      if (response) {
+        CurrentState = MusicState.playradio;
+        ChangeControl();
+      }
+    })
+}
+
+const onConvert2Radio = () => {
+
+  let playConvertBtn = document.getElementById("playRadioBtn");
+  playConvertBtn!.style.display = "none";
+  let convertBtn = document.getElementById("convert2Radio");
+  convertBtn!.style.display = "none";
+  invoke<boolean>('convert2radio')
+    .then((response) => {
+      (document.getElementById("convert2Radio")! as HTMLButtonElement).disabled = false;
+      if (response) {
+        playConvertBtn!.style.display = "initial";
+      }
+    })
+}
+
+
 export default function Home() {
   return (
     <>
@@ -123,14 +163,11 @@ export default function Home() {
         <div className={styles.musictoggle}>
           <a onClick={onStop} id="stopBtn" > Stop</a>
         </div>
-        <div className={styles.radioheader} >
-          <a onClick={onToggle} id="radioVersion" >Radio Version</a>
+        <div className={styles.musictoggle}>
+          <a onClick={onConvert2Radio} id="convert2Radio" > Convert to Radio</a>
         </div>
         <div className={styles.musictoggle}>
-          <a onClick={onPlay} id="playBtn" > Play</a>
-        </div>
-        <div className={styles.musictoggle}>
-          <a onClick={onPause} id="pauseBtn"> Download</a>
+          <a onClick={onPlayRadio} id="playRadioBtn" > Play Radio</a>
         </div>
       </div>
 
