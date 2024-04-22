@@ -1,3 +1,4 @@
-cargo run dev
+simple app covert mp3 to radio version
 
-cargo run build
+- cargo run dev
+- cargo run build
